@@ -6,14 +6,14 @@ namespace EscolaDeIdiomas.Data
     public class DataContexto : DbContext
     {
         public DataContexto(DbContextOptions<DataContexto> opcoes) : base(opcoes) { }
-        public DbSet<Aluno> Alunos {  get; set; }
+        public DbSet<Aluno> Alunos { get; set; }
         public DbSet<Turma> Turmas { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AlunosTurmas>()
                 .HasKey(at => new { at.TurmaId, at.AlunoId });
-            
+
             modelBuilder.Entity<AlunosTurmas>()
                 .HasOne(a => a.Aluno)
                 .WithMany(at => at.AlunosTurmas)
