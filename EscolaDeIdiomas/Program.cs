@@ -1,4 +1,6 @@
 using EscolaDeIdiomas.Data;
+using EscolaDeIdiomas.Interfaces;
+using EscolaDeIdiomas.Repository;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,7 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
+builder.Services.AddScoped<IAlunoRepository, AlunoRepository>();
+builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
+builder.Services.AddScoped<IAlunosTurmasRepository, AlunosTurmasRepository>();
+
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<DataContexto>(opcoes =>

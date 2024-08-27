@@ -1,36 +1,59 @@
-﻿using EscolaDeIdiomas.Models;
-using EscolaDeIdiomas.Repository;
+﻿using AutoMapper;
+using EscolaDeIdiomas.Dto;
+using EscolaDeIdiomas.Interfaces;
+using EscolaDeIdiomas.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EscolaDeIdiomas.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TurmasController : ControllerBase
+    public class TurmasController : Controller
     {
-        [HttpGet]
-        [Route("Todas")]
-        [ProducesResponseType(200, Type = typeof(Turma))]
-        public IEnumerable<Turma> GetAlunosTurmas()
+        private readonly ITurmaRepository _turmaRepository;
+        private readonly IMapper _mapper;
+
+        public TurmasController(ITurmaRepository turmaRepository, IMapper mapper)
         {
-            return TurmaRepository.Turmas;
+            _turmaRepository = turmaRepository;
+            _mapper = mapper;
         }
 
-        [HttpGet("{id:int}")]
+        [HttpGet]
+        [Route("Todas")]
+        [ProducesResponseType(200, Type = typeof(IEnumerable<Turma>))]
+        public IActionResult GetTodasTurmas() // Achar todas as Turmas existentes
+        {
+            var turmas = _mapper.Map<List<TurmaDto>>(_turmaRepository.GetTodasTurmas());
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            return Ok(turmas);
+        }
+
+
+        [HttpGet("id/{id}")]
         [ProducesResponseType(200, Type = typeof(Turma))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public ActionResult GetTurmaPorId(int id)
+        public IActionResult GetTurmaPorId(int id) // Achar a Turma pelo Id
         {
-            if (id <= 0)
-            { 
-                return BadRequest($"A Id não pode ser 0 ou negativa"); 
+            if (!_turmaRepository.TurmaExiste(id))
+            {
+                return BadRequest("A Turma não existe");
             }
 
-            var turma = TurmaRepository.Turmas.FirstOrDefault(n => n.Id == id);
+            var turma = _mapper.Map<TurmaDto>(_turmaRepository.GetTurmaPorId(id));
+
             if (turma == null)
             {
-                return NotFound($"Turma com a Id {id} não encontrado");
+                return NotFound("Turma não encontrada");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
             }
 
             return Ok(turma);
@@ -40,17 +63,23 @@ namespace EscolaDeIdiomas.Controllers
         [ProducesResponseType(200, Type = typeof(Turma))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public ActionResult GetTurmaPorIdioma(string idioma)
+        public ActionResult GetTurmaPorIdioma(string idioma) // Achar a Turma pelo idioma
         {
             if (string.IsNullOrEmpty(idioma))
             {
-                return BadRequest($"O idioma da turma não pode ser encontrado");
+                return BadRequest("Idioma da turma não existe");
             }
 
-            var turma = TurmaRepository.Turmas.FirstOrDefault(n => n.Idioma.Equals(idioma, StringComparison.InvariantCultureIgnoreCase));
+            var turma = _mapper.Map<List<TurmaDto>>(_turmaRepository.GetTurmaPorIdioma(idioma));
+
             if (turma == null)
             {
-                return NotFound($"A turma com a lição {idioma} não foi encontrado");
+                return NotFound("Idioma da turma não encontrado");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
             }
 
             return Ok(turma);
@@ -60,42 +89,165 @@ namespace EscolaDeIdiomas.Controllers
         [ProducesResponseType(200, Type = typeof(Turma))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public ActionResult GetTurmaPorNivel(string nivel)
+        public ActionResult GetTurmaPorNivel(string nivel) // Achar a Turma pelo nivel
         {
             if (string.IsNullOrEmpty(nivel))
             {
-                return BadRequest($"O nivel da turma não pode ser encontrado");
+                return BadRequest("Nivel da turma não existe");
             }
 
-            var turma = TurmaRepository.Turmas.FirstOrDefault(n => n.Nivel.Equals(nivel, StringComparison.InvariantCultureIgnoreCase));
+            var turma = _mapper.Map<List<TurmaDto>>(_turmaRepository.GetTurmaPorNivel(nivel));
+
             if (turma == null)
             {
-                return NotFound($"A(s) turma(s) com o nível {nivel} não foi(foram) encontrado(s)");
+                return NotFound("Nivel da turma não encontrado");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
             }
 
             return Ok(turma);
         }
 
-        [HttpDelete("{id:int}")]
-        [ProducesResponseType(200)]
+        [HttpGet("alunos/{turmaId}")]
+        [ProducesResponseType(200, Type = typeof(Turma))]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public ActionResult<bool> DeleteTurma(int id)
+        public ActionResult GetAlunosPorTurma(int turmaId) // Achar os alunos matriculados nessa turma
         {
-            if (id <= 0)
+            if (!_turmaRepository.TurmaExiste(turmaId))
             {
-                return BadRequest($"A Id não pode ser 0 ou negativa");
+                return BadRequest("A Turma não existe");
             }
 
-            var turma = TurmaRepository.Turmas.FirstOrDefault(n => n.Id == id);
+            var turma = _mapper.Map<List<AlunoDto>>(_turmaRepository.GetAlunoPorTurma(turmaId));
+
             if (turma == null)
-            { 
-                return NotFound($"Turma com a Id {id} não encontrado"); 
+            {
+                return NotFound("A Turma não foi encontrada");
             }
 
-            TurmaRepository.Turmas.Remove(turma);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
-            return true;
+            return Ok(turma);
+        }
+
+        [HttpPost("CriarTurma")]
+        [ProducesResponseType(200, Type = typeof(Turma))]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(422)]
+        public IActionResult CreateTurma([FromBody] TurmaDto criarTurma) // Criar uma turma
+        {
+            if (criarTurma == null)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var numero = _turmaRepository.GetTodasTurmas().FirstOrDefault(t => t.Numero == criarTurma.Numero);
+
+            if (numero != null)
+            {
+                ModelState.AddModelError("", "Número da Turma já existe");
+                return StatusCode(422, ModelState);
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var turmaMap = _mapper.Map<Turma>(criarTurma);
+
+            if (!_turmaRepository.CreateTurma(turmaMap))
+            {
+                ModelState.AddModelError("", "Alguma coisa deu errado durante o salvamento");
+                return StatusCode(500, ModelState);
+            }
+
+            return Ok("Turma criada com sucesso");
+        }
+
+        [HttpPut("ModificarTurma/{turmaId}")]
+        [ProducesResponseType(200, Type = typeof(Turma))]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        public IActionResult UpdateTurma(int turmaId, [FromBody] TurmaDto turmaModificada) // Atualizar as informações da turma
+        {
+            if (turmaModificada == null)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var numero = _turmaRepository.GetTodasTurmas().FirstOrDefault(t => t.Numero == turmaModificada.Numero);
+
+            if (numero != null)
+            {
+                ModelState.AddModelError("", "Número da Turma já existe");
+                return StatusCode(422, ModelState);
+            }
+
+            if (turmaId != turmaModificada.Id)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (!_turmaRepository.TurmaExiste(turmaId))
+            {
+                return NotFound("A Turma não existe");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var turmaMap = _mapper.Map<Turma>(turmaModificada);
+
+            if (!_turmaRepository.UpdateTurma(turmaMap))
+            {
+                ModelState.AddModelError("", "Alguma coisa deu errado");
+                return StatusCode(500, ModelState);
+            }
+
+            return Ok("Turma modificada com sucesso");
+        }
+
+        [HttpDelete("DeletarTurma/{turmaId}")]
+        [ProducesResponseType(200, Type = typeof(Turma))]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        public IActionResult DeleteTurma(int turmaId) // Deletar a turma que não tenha alunos
+        {
+            if (!_turmaRepository.TurmaExiste(turmaId))
+            {
+                return BadRequest("Turma não existe");
+            }
+
+            var deleteTurma = _turmaRepository.GetTurmaPorId(turmaId);
+            var temAluno = _turmaRepository.TemAluno(turmaId);
+
+            if (temAluno >= 1)
+            {
+                return BadRequest("Não pudemos deletar porque a turma tem aluno/s vinculados");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (!_turmaRepository.DeleteTurma(deleteTurma))
+            {
+                ModelState.AddModelError("", "Alguma coisa deu errado");
+            }
+
+            return Ok("Turma deletada com sucesso");
         }
     }
 }
