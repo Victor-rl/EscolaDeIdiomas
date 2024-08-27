@@ -2,6 +2,7 @@
 using EscolaDeIdiomas.Data;
 using EscolaDeIdiomas.Interfaces;
 using EscolaDeIdiomas.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace EscolaDeIdiomas.Repository
 {
@@ -60,6 +61,7 @@ namespace EscolaDeIdiomas.Repository
 
         public bool UpdateTurma(Turma turma) // Atualizar as informações de uma turma
         {
+            _contexto.ChangeTracker.Clear();
             _contexto.Update(turma);
             return Save();
         }

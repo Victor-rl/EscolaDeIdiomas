@@ -186,7 +186,7 @@ namespace EscolaDeIdiomas.Controllers
 
             var numero = _turmaRepository.GetTodasTurmas().FirstOrDefault(t => t.Numero == turmaModificada.Numero);
 
-            if (numero != null)
+            if (numero != null && numero.Id != turmaId)
             {
                 ModelState.AddModelError("", "Número da Turma já existe");
                 return StatusCode(422, ModelState);
